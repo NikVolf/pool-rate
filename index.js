@@ -10,21 +10,38 @@ console.log(`seedhash: ${seedhash0}`);
 
 const server = new JSONRPCServer();
 
+var blocks = [];
+var lastLogged = new Date().getTime() / 1000;
+
 // First parameter is a method name.
 // Second parameter is a method itself.
 // A method takes JSON-RPC params and returns a result.
 // It can also return a promise of the result.
 server.addMethod("eth_getWork", () => {
     var result = [
-        "0x384525b16fcfda97e6cb019fc9baff53736079f52340ac4bc3a6cad8e63aa546", 
-        `0x${seedhash0}`, 
-        "0xd1ff1c01710000000000000000000000d1ff1c01710000000000000000000000"
+        "0x384525b16fcfda97e6cb019fc9baff53736079f52340ac4bc3a6cad8e63aa546",
+        `0x${seedhash0}`,
+        "0x000010c6f7a0b5ed8d36b4c7f34938583621fafc8b0079a2834d26fa3fcc9ea9"
     ];
     console.log(`Requested work, given: ${result}`);
     return result;
 });
 server.addMethod("eth_submitWork", (work) => {
-    console.log(`GOT WORK!!! ${work}`);
+    var blockTime = new Date().getTime() / 1000;
+    blocks.push(blockTime);
+    if (blocks.length > 1000) {
+      blocks.shift();
+    }
+
+    if (lastLogged < blockTime && blocks.length > 0) {
+      lastLogged = blockTime;
+      let firstTime = blocks[0];
+      let lastTime = blocks[blocks.length-1];
+      let solutions = blocks.length;
+      let rate = solutions / (lastTime - firstTime);
+      console.log(`Current solution rate ${rate}Mh/s`);
+    }
+
     return true;
 });
 
