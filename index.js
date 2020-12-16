@@ -53,6 +53,11 @@ server.addMethod("web3_clientVersion", () => {
 server.addMethod("parity_setAuthor", (p1, p2) => {
 });
 
+server.addMethod("parity_setExtraData", (p1)=> {
+});
+
+parity_setExtraData
+
 const app = express();
 app.use(bodyParser.json());
 
