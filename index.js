@@ -46,6 +46,10 @@ server.addMethod("eth_submitWork", (work) => {
     return true;
 });
 
+server.addMethod("web3_clientVersion", () => {
+  return "pool-rate/0.1";
+});
+
 const app = express();
 app.use(bodyParser.json());
 
