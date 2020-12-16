@@ -55,6 +55,7 @@ app.use(bodyParser.json());
 
 app.post("/", (req, res) => {
   const jsonRPCRequest = req.body;
+  console.log(`body: ${jsonRPCRequest}`);
   // server.receive takes a JSON-RPC request and returns a promise of a JSON-RPC response.
   server.receive(jsonRPCRequest).then(jsonRPCResponse => {
     if (jsonRPCResponse) {
