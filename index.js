@@ -33,13 +33,14 @@ server.addMethod("eth_submitWork", (work) => {
       blocks.shift();
     }
 
-    if (lastLogged < blockTime && blocks.length > 0) {
+    // logging every 5 seconds
+    if (lastLogged < (blockTime-5) && blocks.length > 0) {
       lastLogged = blockTime;
       let firstTime = blocks[0];
       let lastTime = blocks[blocks.length-1];
       let solutions = blocks.length;
       let rate = solutions / (lastTime - firstTime);
-      console.log(`Current solution rate ${rate}Mh/s`);
+      console.log(`${(new Date()).toISOString()} | Rate ${rate.toFixed(2)}Mh/s`);
     }
 
     return true;
