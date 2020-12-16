@@ -21,9 +21,9 @@ server.addMethod("eth_getWork", () => {
     var result = [
         "0x384525b16fcfda97e6cb019fc9baff53736079f52340ac4bc3a6cad8e63aa546",
         `0x${seedhash0}`,
+        // this is 2**256 // 1000000, so that solution rate per second will translate directly in MHs
         "0x000010c6f7a0b5ed8d36b4c7f34938583621fafc8b0079a2834d26fa3fcc9ea9"
     ];
-    console.log(`Requested work, given: ${result}`);
     return result;
 });
 server.addMethod("eth_submitWork", (work) => {
@@ -50,7 +50,6 @@ app.use(bodyParser.json());
 
 app.post("/", (req, res) => {
   const jsonRPCRequest = req.body;
-  console.log(`req body: ${req.body}`);
   // server.receive takes a JSON-RPC request and returns a promise of a JSON-RPC response.
   server.receive(jsonRPCRequest).then(jsonRPCResponse => {
     if (jsonRPCResponse) {
