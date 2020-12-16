@@ -50,12 +50,14 @@ server.addMethod("web3_clientVersion", () => {
   return "pool-rate/0.1";
 });
 
+server.addMethod("parity_setAuthor", (p1, p2) => {
+});
+
 const app = express();
 app.use(bodyParser.json());
 
 app.post("/", (req, res) => {
   const jsonRPCRequest = req.body;
-  console.log(`body: ${jsonRPCRequest}`);
   // server.receive takes a JSON-RPC request and returns a promise of a JSON-RPC response.
   server.receive(jsonRPCRequest).then(jsonRPCResponse => {
     if (jsonRPCResponse) {
