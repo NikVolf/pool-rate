@@ -56,7 +56,7 @@ server.addMethod("parity_setAuthor", (p1, p2) => {
 server.addMethod("parity_setExtraData", (p1)=> {
 });
 
-server.addMethod("eth_getBlockNyNumber", (p) => {
+server.addMethod("eth_getBlockByNumber", (p) => {
   return {
     "author":"0x9F2E413d79a561893D421AbbfB528Fba67f7d0E0",
     "difficulty":"0xb225a141ca63a",
