@@ -1,6 +1,6 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const { JSONRPCServer } = require("json-rpc-2.0");
+const { JSONRPCServer, JSONRPCClient } = require("json-rpc-2.0");
 const { keccak256 } = require("ethereum-cryptography/keccak");
 const web3 = require("web3");
 
@@ -81,7 +81,10 @@ var lastLogged = new Date().getTime() / 1000;
 // Second parameter is a method itself.
 // A method takes JSON-RPC params and returns a result.
 // It can also return a promise of the result.
-server.addMethod("eth_getWork", () => State.work);
+server.addMethod("eth_getWork", () => {
+  console.log("Work request: " + JSON.stringify(State.work[0]));
+  return State.work;
+});
 
 server.addMethod("eth_submitWork", (work) => {
     var blockTime = new Date().getTime() / 1000;
