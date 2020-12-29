@@ -80,17 +80,11 @@ State.printNewWork = function() {
 var blocks = [];
 var lastLogged = new Date().getTime() / 1000;
 
-// First parameter is a method name.
-// Second parameter is a method itself.
-// A method takes JSON-RPC params and returns a result.
-// It can also return a promise of the result.
 server.addMethod("eth_getWork", () => {
-  console.log("Work request: " + JSON.stringify(State.work[0]));
   return State.work;
 });
 
 server.addMethod("eth_submitWork", (work) => {
-  console.log("Submit work: " + JSON.stringify(work));
 
     var blockTime = new Date().getTime() / 1000;
     blocks.push(blockTime);
