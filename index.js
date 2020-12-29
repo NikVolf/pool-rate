@@ -20,7 +20,7 @@ var State = {
   ],
   block: {
     "author":"0xb2930b35844a230f00e51431acae96fe543a0347",
-    "difficulty":"0xb225a141ca63a",
+    "difficulty":"0xF4240",
     "extraData":"0x73656f31",
     "gasLimit":"0x7a121d",
     "gasUsed":"0x7a0417",
@@ -90,6 +90,8 @@ server.addMethod("eth_getWork", () => {
 });
 
 server.addMethod("eth_submitWork", (work) => {
+  console.log("Submit work: " + JSON.stringify(work));
+
     var blockTime = new Date().getTime() / 1000;
     blocks.push(blockTime);
     if (blocks.length > 1000) {
