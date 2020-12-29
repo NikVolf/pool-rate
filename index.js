@@ -49,7 +49,7 @@ var State = {
 
 State.next = function() {
   let nextBlockNumber = web3.utils.toBN(State.block.number).add(web3.utils.toBN(1));
-  State.block.number = nextBlockNumber;
+  State.block.number = "0x" + nextBlockNumber;
 
   let sealHash = web3.utils.soliditySha3(
     State.block.parentHash,
@@ -72,6 +72,7 @@ State.next = function() {
 
 State.printNewWork = function() {
   console.log("new work: " + JSON.stringify(State.work));
+  console.log("new block: " + JSON.stringify(State.block));
 }
 
 var blocks = [];
