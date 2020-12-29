@@ -70,6 +70,10 @@ State.next = function() {
   State.work[0] = sealHash;
 }
 
+State.printNewWork = function() {
+  console.log("new work: " + JSON.stringify(State.work));
+}
+
 var blocks = [];
 var lastLogged = new Date().getTime() / 1000;
 
@@ -131,3 +135,8 @@ app.post("/", (req, res) => {
 });
 
 app.listen(8545);
+
+setInterval(() => {
+  State.next();
+  State.printNewWork();
+}, 10000);
