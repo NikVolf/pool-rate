@@ -70,6 +70,8 @@ State.next = function() {
   State.work[0] = sealHash;
 }
 
+State.next();
+
 State.printNewWork = function() {
   console.log("new work: " + JSON.stringify(State.work));
   console.log("new block: " + JSON.stringify(State.block));
