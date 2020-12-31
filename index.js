@@ -3,11 +3,26 @@ const bodyParser = require("body-parser");
 const { JSONRPCServer, JSONRPCClient } = require("json-rpc-2.0");
 const { keccak256 } = require("ethereum-cryptography/keccak");
 const web3 = require("web3");
+const env = require('env-var');
+const RATE_DIV = env.get("PR_RATE_DIV").asIntPositive() || 1;
+const LOGGING = env.get("PR_LOG").asString() || "minimal";
+
+function debug(msg) {
+  if (LOGGING == "debug") {
+    console.log(msg);
+  }
+}
 
 const seedhash0 = keccak256(
         Buffer.from("0000000000000000000000000000000000000000000000000000000000000000", "hex")
     ).toString("hex");
 console.log(`seedhash: ${seedhash0}`);
+console.log(`rate divider: ${RATE_DIV}`);
+console.log(`logging: ${LOGGING}`);
+
+const target = web3.utils.toBN(2).pow(web3.utils.toBN(256)).div(web3.utils.toBN(1000000 * RATE_DIV));
+
+console.log(`target: ${web3.utils.padLeft("0x" + target.toString('hex'), 64)}`);
 
 const server = new JSONRPCServer();
 
@@ -16,11 +31,11 @@ var State = {
     "0x384525b16fcfda97e6cb019fc9baff53736079f52340ac4bc3a6cad8e63aa546",
     `0x${seedhash0}`,
     // this is 2**256 // 1000000, so that solution rate per second will translate directly in MHs
-    "0x000010c6f7a0b5ed8d36b4c7f34938583621fafc8b0079a2834d26fa3fcc9ea9"
+    web3.utils.padLeft("0x" + target.toString('hex'), 64),
   ],
   block: {
     "author":"0xb2930b35844a230f00e51431acae96fe543a0347",
-    "difficulty":"0xF4240",
+    "difficulty": `0x${web3.utils.toBN(1000000*RATE_DIV).toString('hex')}`,
     "extraData":"0x73656f31",
     "gasLimit":"0x7a121d",
     "gasUsed":"0x7a0417",
@@ -73,19 +88,21 @@ State.next = function() {
 State.next();
 
 State.printNewWork = function() {
-  console.log("new work: " + JSON.stringify(State.work));
-  console.log("new block: " + JSON.stringify(State.block));
+  debug("new work: " + JSON.stringify(State.work));
+  debug("new block: " + JSON.stringify(State.block));
 }
 
 var blocks = [];
 var lastLogged = new Date().getTime() / 1000;
 
 server.addMethod("eth_getWork", () => {
+  debug(`Requested work: ${JSON.stringify(State.work)}`);
+
   return State.work;
 });
 
 server.addMethod("eth_submitWork", (work) => {
-
+    debug(`Submit work: ${JSON.stringify(work)}`);
     var blockTime = new Date().getTime() / 1000;
     blocks.push(blockTime);
     if (blocks.length > 1000) {
@@ -98,7 +115,7 @@ server.addMethod("eth_submitWork", (work) => {
       let firstTime = blocks[0];
       let lastTime = blocks[blocks.length-1];
       let solutions = blocks.length;
-      let rate = solutions / (lastTime - firstTime);
+      let rate = (solutions / (lastTime - firstTime)) * RATE_DIV;
       console.log(`${(new Date()).toISOString()} | Rate ${rate.toFixed(2)}Mh/s`);
     }
 
