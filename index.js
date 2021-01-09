@@ -4,8 +4,22 @@ const { JSONRPCServer, JSONRPCClient } = require("json-rpc-2.0");
 const { keccak256 } = require("ethereum-cryptography/keccak");
 const web3 = require("web3");
 const env = require('env-var');
+import Ethash from '@ethereumjs/ethash'
+const ethHashUtil = require('./util.js')
+
 const RATE_DIV = env.get("PR_RATE_DIV").asIntPositive() || 1;
 const LOGGING = env.get("PR_LOG").asString() || "minimal";
+const level = require('level-mem')
+
+const cacheDB = level();
+const ethash = new Ethash(cacheDB);
+
+
+const epoch = ethHashUtil.getEpoc(bufferToInt(1));
+const full_size = ethHashUtil.getFullSize(epoch);
+
+ethash.mkcache(1000, Buffer.alloc(32).fill(0));
+
 
 function debug(msg) {
   if (LOGGING == "debug") {
@@ -102,13 +116,16 @@ server.addMethod("eth_getWork", () => {
 });
 
 server.addMethod("eth_submitWork", (work) => {
-    debug(`Submit work: ${JSON.stringify(work)}`);
+    let submittedWork = JSON.stringify(work);
+    debug(`Submit work: ${submittedWork}`);
     var blockTime = new Date().getTime() / 1000;
     blocks.push(blockTime);
     if (blocks.length > 1000) {
       blocks.shift();
     }
 
+    let result = ethash.run(submittedWork[0], submittedWork[1], full_size);
+    let mixHash = result.mix.toString('hex')
     // logging every 5 seconds
     if (lastLogged < (blockTime-5) && blocks.length > 0) {
       lastLogged = blockTime;
@@ -121,7 +138,9 @@ server.addMethod("eth_submitWork", (work) => {
 
     State.next();
 
-    return true;
+    let validWork = mixHash === submittedWork[2];
+    console.log(`validWork: ${validWork}`);
+    return validWork;
 });
 
 server.addMethod("web3_clientVersion", () => {
