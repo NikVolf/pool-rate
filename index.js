@@ -125,9 +125,9 @@ server.addMethod("eth_submitWork", (work) => {
 
     let nonce = submittedWork[0].substring(2);
     let powHash = submittedWork[1].substring(2);
-    let mixDigest = submittedWork[2].substring(2);
-    console.log(`nonce: ${nonce}, powHash: ${powHash}, mixDigest: ${mixDigest}`)
-
+    let mixhashSubmitWork = submittedWork[2].substring(2);
+    console.log(`nonce: ${nonce}, powHash: ${powHash}, mixhashSubmitWork: ${mixhashSubmitWork}`)
+    console.log(`Block's mixHash ${State.block.mixHash}`)
     let blockTime = new Date().getTime() / 1000;
     blocks.push(blockTime);
     if (blocks.length > 1000) {
@@ -148,8 +148,8 @@ server.addMethod("eth_submitWork", (work) => {
 
     State.next();
     console.log(`mixHash: ${mixHash}`)
-    console.log(`mixDigest: ${mixDigest}`)
-    let validWork = mixHash === mixDigest;
+    console.log(`mixDigest: ${mixhashSubmitWork}`)
+    let validWork = mixHash === mixhashSubmitWork;
     console.log(`validWork: ${validWork}`);
     return validWork;
 });
