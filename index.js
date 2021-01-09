@@ -97,6 +97,7 @@ State.next = function() {
     console.log(`Block number: ${nextBlockNumber}`)
     console.log(`Epoch: ${nextEpoch}`)
     ethash.mkcache(nextEpoch, Buffer.alloc(32).fill(0));
+    console.log(`Cache: ${web3.utils.toHex(ethash.cache)}`)
     State.fullSize = ethHashUtil.getFullSize(nextEpoch);
     console.log(`Fullsize: ${State.fullSize}`)
   }
