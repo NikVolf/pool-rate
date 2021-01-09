@@ -4,7 +4,7 @@ const { JSONRPCServer, JSONRPCClient } = require("json-rpc-2.0");
 const { keccak256 } = require("ethereum-cryptography/keccak");
 const web3 = require("web3");
 const env = require('env-var');
-import Ethash from '@ethereumjs/ethash'
+const Ethash = require('ethashjs');
 const ethHashUtil = require('./util.js')
 
 const RATE_DIV = env.get("PR_RATE_DIV").asIntPositive() || 1;
@@ -13,13 +13,6 @@ const level = require('level-mem')
 
 const cacheDB = level();
 const ethash = new Ethash(cacheDB);
-
-
-const epoch = ethHashUtil.getEpoc(bufferToInt(1));
-const full_size = ethHashUtil.getFullSize(epoch);
-
-ethash.mkcache(1000, Buffer.alloc(32).fill(0));
-
 
 function debug(msg) {
   if (LOGGING == "debug") {
@@ -41,6 +34,8 @@ console.log(`target: ${web3.utils.padLeft("0x" + target.toString('hex'), 64)}`);
 const server = new JSONRPCServer();
 
 var State = {
+  epoch: 187,
+  fullSize: 2650796416,
   work: [
     "0x384525b16fcfda97e6cb019fc9baff53736079f52340ac4bc3a6cad8e63aa546",
     `0x${seedhash0}`,
@@ -96,6 +91,16 @@ State.next = function() {
     web3.utils.toBN(State.block.nonce)
   );
 
+  let nextEpoch = ethHashUtil.getEpoc(nextBlockNumber);
+  if (State.epoch !== nextEpoch) {
+    State.epoch = nextEpoch;
+    console.log(`Block number: ${nextBlockNumber}`)
+    console.log(`Epoch: ${nextEpoch}`)
+    ethash.mkcache(nextEpoch, Buffer.alloc(32).fill(0));
+    State.fullSize = ethHashUtil.getFullSize(nextEpoch);
+    console.log(`Fullsize: ${State.fullSize}`)
+  }
+
   State.work[0] = sealHash;
 }
 
@@ -116,15 +121,20 @@ server.addMethod("eth_getWork", () => {
 });
 
 server.addMethod("eth_submitWork", (work) => {
-    let submittedWork = JSON.stringify(work);
-    debug(`Submit work: ${submittedWork}`);
-    var blockTime = new Date().getTime() / 1000;
+    let submittedWork = JSON.parse(JSON.stringify(work));
+
+    let nonce = submittedWork[0].substring(2);
+    let powHash = submittedWork[1].substring(2);
+    let mixDigest = submittedWork[2].substring(2);
+    console.log(`nonce: ${nonce}, powHash: ${powHash}, mixDigest: ${mixDigest}`)
+
+    let blockTime = new Date().getTime() / 1000;
     blocks.push(blockTime);
     if (blocks.length > 1000) {
       blocks.shift();
     }
 
-    let result = ethash.run(submittedWork[0], submittedWork[1], full_size);
+    let result = ethash.run(new Buffer(powHash, 'hex'), new Buffer(nonce, 'hex'), State.fullSize);
     let mixHash = result.mix.toString('hex')
     // logging every 5 seconds
     if (lastLogged < (blockTime-5) && blocks.length > 0) {
@@ -137,8 +147,9 @@ server.addMethod("eth_submitWork", (work) => {
     }
 
     State.next();
-
-    let validWork = mixHash === submittedWork[2];
+    console.log(`mixHash: ${mixHash}`)
+    console.log(`mixDigest: ${mixDigest}`)
+    let validWork = mixHash === mixDigest;
     console.log(`validWork: ${validWork}`);
     return validWork;
 });
