@@ -153,6 +153,14 @@ server.addMethod("eth_getWork", () => {
   return State.work;
 });
 
+function nextOrReorganizeWithProbability(n) {
+  if (Math.random() <= n){
+    State.reorganize();
+  } else {
+    State.next();
+  }
+}
+
 server.addMethod("eth_submitWork", (w) => {
     let work = JSON.parse(JSON.stringify(w));
     let headerHash = new Buffer(work[1].substring(2), 'hex') ;
@@ -174,7 +182,7 @@ server.addMethod("eth_submitWork", (w) => {
       let rate = (solutions / (lastTime - firstTime)) * RATE_DIV;
       console.log(`${(new Date()).toISOString()} | Rate ${rate.toFixed(2)}Mh/s`);
     }
-    State.next();
+    nextOrReorganizeWithProbability(0.1)
     let mixHash = result.mix.toString('hex');
     let expectedMixHash = mixhash.toString('hex')
     return mixHash === expectedMixHash;
