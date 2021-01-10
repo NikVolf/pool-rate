@@ -36,6 +36,7 @@ const server = new JSONRPCServer();
 var State = {
   epoch: 187,
   fullSize: 2650796416,
+  cacheSize: 16776896,
   work: [
     "0x384525b16fcfda97e6cb019fc9baff53736079f52340ac4bc3a6cad8e63aa546",
     `0x${seedhash0.toString("hex")}`,
@@ -93,11 +94,12 @@ State.next = function() {
 
   let nextEpoch = ethHashUtil.getEpoc(nextBlockNumber);
   if (State.epoch !== nextEpoch) {
-    State.epoch = nextEpoch;
     console.log(`Block number: ${nextBlockNumber}`)
+    State.epoch = nextEpoch;
     console.log(`Epoch: ${nextEpoch}`)
-    ethash.mkcache(nextEpoch, seedhash0);
-    console.log(`Cache: ${web3.utils.toHex(ethash.cache)}`)
+    State.cacheSize = ethHashUtil.getCacheSize(nextEpoch);
+    console.log(`CacheSize: ${State.cacheSize}`)
+    ethash.mkcache(State.cacheSize, new Buffer("0000000000000000000000000000000000000000000000000000000000000000", 'hex'));
     State.fullSize = ethHashUtil.getFullSize(nextEpoch);
     console.log(`Fullsize: ${State.fullSize}`)
   }
@@ -121,21 +123,18 @@ server.addMethod("eth_getWork", () => {
   return State.work;
 });
 
-server.addMethod("eth_submitWork", (work) => {
-    let submittedWork = JSON.parse(JSON.stringify(work));
+server.addMethod("eth_submitWork", (w) => {
+    let work = JSON.parse(JSON.stringify(w));
+    let headerHash = new Buffer(work[1].substring(2), 'hex') ;
+    let nonce = new Buffer(work[0].substring(2), 'hex');
+    var mixhash = new Buffer(work[2].substring(2), 'hex');
 
-    let nonce = submittedWork[0].substring(2);
-    let headerHash = submittedWork[1].substring(2);
-    let mixhashSubmitWork = submittedWork[2].substring(2);
-    console.log(`nonce: ${nonce}, headerHash: ${headerHash}, mixhashSubmitWork: ${mixhashSubmitWork}`)
     let blockTime = new Date().getTime() / 1000;
     blocks.push(blockTime);
     if (blocks.length > 1000) {
       blocks.shift();
     }
-
-    let result = ethash.run(new Buffer(headerHash, 'hex'), new Buffer(nonce, 'hex'), State.fullSize);
-    let mixHash = result.mix.toString('hex')
+    let result = ethash.run(headerHash, nonce, State.fullSize);
     // logging every 5 seconds
     if (lastLogged < (blockTime-5) && blocks.length > 0) {
       lastLogged = blockTime;
@@ -145,13 +144,10 @@ server.addMethod("eth_submitWork", (work) => {
       let rate = (solutions / (lastTime - firstTime)) * RATE_DIV;
       console.log(`${(new Date()).toISOString()} | Rate ${rate.toFixed(2)}Mh/s`);
     }
-
     State.next();
-    console.log(`mixHash: ${mixHash}`)
-    console.log(`mixHashSubmitWork: ${mixhashSubmitWork}`)
-    let validWork = mixHash === mixhashSubmitWork;
-    console.log(`validWork: ${validWork}`);
-    return validWork;
+    let mixHash = result.mix.toString('hex');
+    let expectedMixHash = mixhash.toString('hex')
+    return mixHash === expectedMixHash;
 });
 
 server.addMethod("web3_clientVersion", () => {
