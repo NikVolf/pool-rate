@@ -22,8 +22,8 @@ function debug(msg) {
 
 const seedhash0 = keccak256(
         Buffer.from("0000000000000000000000000000000000000000000000000000000000000000", "hex")
-    ).toString("hex");
-console.log(`seedhash: ${seedhash0}`);
+    );
+console.log(`seedhash: ${seedhash0.toString("hex")}`);
 console.log(`rate divider: ${RATE_DIV}`);
 console.log(`logging: ${LOGGING}`);
 
@@ -38,7 +38,7 @@ var State = {
   fullSize: 2650796416,
   work: [
     "0x384525b16fcfda97e6cb019fc9baff53736079f52340ac4bc3a6cad8e63aa546",
-    `0x${seedhash0}`,
+    `0x${seedhash0.toString("hex")}`,
     // this is 2**256 // 1000000, so that solution rate per second will translate directly in MHs
     web3.utils.padLeft("0x" + target.toString('hex'), 64),
   ],
@@ -96,7 +96,7 @@ State.next = function() {
     State.epoch = nextEpoch;
     console.log(`Block number: ${nextBlockNumber}`)
     console.log(`Epoch: ${nextEpoch}`)
-    ethash.mkcache(nextEpoch, Buffer.alloc(32).fill(0));
+    ethash.mkcache(nextEpoch, seedhash0);
     console.log(`Cache: ${web3.utils.toHex(ethash.cache)}`)
     State.fullSize = ethHashUtil.getFullSize(nextEpoch);
     console.log(`Fullsize: ${State.fullSize}`)
@@ -125,17 +125,16 @@ server.addMethod("eth_submitWork", (work) => {
     let submittedWork = JSON.parse(JSON.stringify(work));
 
     let nonce = submittedWork[0].substring(2);
-    let powHash = submittedWork[1].substring(2);
+    let headerHash = submittedWork[1].substring(2);
     let mixhashSubmitWork = submittedWork[2].substring(2);
-    console.log(`nonce: ${nonce}, powHash: ${powHash}, mixhashSubmitWork: ${mixhashSubmitWork}`)
-    console.log(`Block's mixHash ${State.block.mixHash}`)
+    console.log(`nonce: ${nonce}, headerHash: ${headerHash}, mixhashSubmitWork: ${mixhashSubmitWork}`)
     let blockTime = new Date().getTime() / 1000;
     blocks.push(blockTime);
     if (blocks.length > 1000) {
       blocks.shift();
     }
 
-    let result = ethash.run(new Buffer(powHash, 'hex'), new Buffer(nonce, 'hex'), State.fullSize);
+    let result = ethash.run(new Buffer(headerHash, 'hex'), new Buffer(nonce, 'hex'), State.fullSize);
     let mixHash = result.mix.toString('hex')
     // logging every 5 seconds
     if (lastLogged < (blockTime-5) && blocks.length > 0) {
@@ -149,7 +148,7 @@ server.addMethod("eth_submitWork", (work) => {
 
     State.next();
     console.log(`mixHash: ${mixHash}`)
-    console.log(`mixDigest: ${mixhashSubmitWork}`)
+    console.log(`mixHashSubmitWork: ${mixhashSubmitWork}`)
     let validWork = mixHash === mixhashSubmitWork;
     console.log(`validWork: ${validWork}`);
     return validWork;
