@@ -53,7 +53,7 @@ var State = {
     "miner":"0xb2930b35844a230f00e51431acae96fe543a0347",
     "mixHash":"0x1027e261561dc9cc9c8a47ce76cc993f9740143ee3a9c3f4255f3282c791e2c1",
     "nonce":"0x7a320d001252ee02",
-    "number":"0x567f01",
+    "number":"0x0001",
     "parentHash":"0x1f187383e5ed477d786b586d85287ea99bff95825a6767a8c5839fce40d0bca2",
     "receiptsRoot":"0x77e9ac07b8a9f00156c869779e526300688104a65443b214dadbff8eed2d1384",
     "sealFields":[
