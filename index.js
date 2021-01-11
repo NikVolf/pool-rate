@@ -139,9 +139,9 @@ State.reorganize = function() {
 
 State.next();
 
-State.printNewWork = function() {
-  debug("new work: " + JSON.stringify(State.work));
-  debug("new block: " + JSON.stringify(State.block));
+State.printWork = function() {
+  debug("work: " + JSON.stringify(State.work));
+  debug("block: " + JSON.stringify(State.block));
 }
 
 var blocks = [];
@@ -153,13 +153,12 @@ server.addMethod("eth_getWork", () => {
   return State.work;
 });
 
-function nextOrReorganizeWithProbability(n) {
+function reorganizeWithProbability(n) {
   if (Math.random() <= n){
+    debug("Reorganize block: " + JSON.stringify(State.block))
     State.reorganize();
-  } else {
-    State.next();
   }
-}
+};
 
 server.addMethod("eth_submitWork", (w) => {
     let work = JSON.parse(JSON.stringify(w));
@@ -182,7 +181,7 @@ server.addMethod("eth_submitWork", (w) => {
       let rate = (solutions / (lastTime - firstTime)) * RATE_DIV;
       console.log(`${(new Date()).toISOString()} | Rate ${rate.toFixed(2)}Mh/s`);
     }
-    nextOrReorganizeWithProbability(0.1)
+    State.next();
     let mixHash = result.mix.toString('hex');
     let expectedMixHash = mixhash.toString('hex')
     return mixHash === expectedMixHash;
@@ -220,6 +219,7 @@ app.post("/", (req, res) => {
 app.listen(8545);
 
 setInterval(() => {
-  State.next();
-  State.printNewWork();
-}, 10000);
+  reorganizeWithProbability(0.33);
+  reorganizeWithProbability(0.33);
+  State.printWork();
+}, 1000);
