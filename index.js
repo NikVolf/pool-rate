@@ -4,8 +4,15 @@ const { JSONRPCServer, JSONRPCClient } = require("json-rpc-2.0");
 const { keccak256 } = require("ethereum-cryptography/keccak");
 const web3 = require("web3");
 const env = require('env-var');
+const Ethash = require('ethashjs');
+const ethHashUtil = require('./util.js')
+
 const RATE_DIV = env.get("PR_RATE_DIV").asIntPositive() || 1;
 const LOGGING = env.get("PR_LOG").asString() || "minimal";
+const level = require('level-mem')
+
+const cacheDB = level();
+const ethash = new Ethash(cacheDB);
 
 function debug(msg) {
   if (LOGGING == "debug") {
@@ -15,8 +22,8 @@ function debug(msg) {
 
 const seedhash0 = keccak256(
         Buffer.from("0000000000000000000000000000000000000000000000000000000000000000", "hex")
-    ).toString("hex");
-console.log(`seedhash: ${seedhash0}`);
+    );
+console.log(`seedhash: ${seedhash0.toString("hex")}`);
 console.log(`rate divider: ${RATE_DIV}`);
 console.log(`logging: ${LOGGING}`);
 
@@ -27,9 +34,12 @@ console.log(`target: ${web3.utils.padLeft("0x" + target.toString('hex'), 64)}`);
 const server = new JSONRPCServer();
 
 var State = {
+  epoch: 187,
+  fullSize: 2650796416,
+  cacheSize: 16776896,
   work: [
     "0x384525b16fcfda97e6cb019fc9baff53736079f52340ac4bc3a6cad8e63aa546",
-    `0x${seedhash0}`,
+    `0x${seedhash0.toString("hex")}`,
     // this is 2**256 // 1000000, so that solution rate per second will translate directly in MHs
     web3.utils.padLeft("0x" + target.toString('hex'), 64),
   ],
@@ -44,7 +54,7 @@ var State = {
     "miner":"0xb2930b35844a230f00e51431acae96fe543a0347",
     "mixHash":"0x1027e261561dc9cc9c8a47ce76cc993f9740143ee3a9c3f4255f3282c791e2c1",
     "nonce":"0x7a320d001252ee02",
-    "number":"0x567f01",
+    "number":"0x0001",
     "parentHash":"0x1f187383e5ed477d786b586d85287ea99bff95825a6767a8c5839fce40d0bca2",
     "receiptsRoot":"0x77e9ac07b8a9f00156c869779e526300688104a65443b214dadbff8eed2d1384",
     "sealFields":[
@@ -82,6 +92,18 @@ State.next = function() {
     web3.utils.toBN(State.block.nonce)
   );
 
+  let nextEpoch = ethHashUtil.getEpoc(nextBlockNumber);
+  if (State.epoch !== nextEpoch) {
+    console.log(`Block number: ${nextBlockNumber}`)
+    State.epoch = nextEpoch;
+    console.log(`Epoch: ${nextEpoch}`)
+    State.cacheSize = ethHashUtil.getCacheSize(nextEpoch);
+    console.log(`CacheSize: ${State.cacheSize}`)
+    ethash.mkcache(State.cacheSize, new Buffer("0000000000000000000000000000000000000000000000000000000000000000", 'hex'));
+    State.fullSize = ethHashUtil.getFullSize(nextEpoch);
+    console.log(`Fullsize: ${State.fullSize}`)
+  }
+
   State.work[0] = sealHash;
 }
 
@@ -101,14 +123,18 @@ server.addMethod("eth_getWork", () => {
   return State.work;
 });
 
-server.addMethod("eth_submitWork", (work) => {
-    debug(`Submit work: ${JSON.stringify(work)}`);
-    var blockTime = new Date().getTime() / 1000;
+server.addMethod("eth_submitWork", (w) => {
+    let work = JSON.parse(JSON.stringify(w));
+    let headerHash = new Buffer(work[1].substring(2), 'hex') ;
+    let nonce = new Buffer(work[0].substring(2), 'hex');
+    var mixhash = new Buffer(work[2].substring(2), 'hex');
+
+    let blockTime = new Date().getTime() / 1000;
     blocks.push(blockTime);
     if (blocks.length > 1000) {
       blocks.shift();
     }
-
+    let result = ethash.run(headerHash, nonce, State.fullSize);
     // logging every 5 seconds
     if (lastLogged < (blockTime-5) && blocks.length > 0) {
       lastLogged = blockTime;
@@ -118,10 +144,10 @@ server.addMethod("eth_submitWork", (work) => {
       let rate = (solutions / (lastTime - firstTime)) * RATE_DIV;
       console.log(`${(new Date()).toISOString()} | Rate ${rate.toFixed(2)}Mh/s`);
     }
-
     State.next();
-
-    return true;
+    let mixHash = result.mix.toString('hex');
+    let expectedMixHash = mixhash.toString('hex')
+    return mixHash === expectedMixHash;
 });
 
 server.addMethod("web3_clientVersion", () => {
