@@ -116,7 +116,7 @@ State.next = function() {
 
 
 State.reorganize = function() {
-
+  debug("Reorganize block: " + JSON.stringify(State.block.number))
   State.block.timestamp = getTimestamp();
 
   State.work[0] = web3.utils.soliditySha3(
@@ -153,10 +153,11 @@ server.addMethod("eth_getWork", () => {
   return State.work;
 });
 
-function reorganizeWithProbability(n) {
-  if (Math.random() <= n){
-    debug("Reorganize block: " + JSON.stringify(State.block))
-    State.reorganize();
+function reorganizeWithProbabilityAndTimeout(probability, timeout) {
+  if (Math.random() <= probability) {
+    setTimeout(() => {
+      State.reorganize()
+    }, timeout);
   }
 }
 
@@ -219,12 +220,8 @@ app.post("/", (req, res) => {
 app.listen(8545);
 
 setInterval(() => {
+  reorganizeWithProbabilityAndTimeout(0.33,1000);
+  reorganizeWithProbabilityAndTimeout(0.33,1000);
   State.next();
   State.printNewWork();
 }, 10000);
-
-
-setInterval(() => {
-  reorganizeWithProbability(0.33);
-  reorganizeWithProbability(0.33);
-}, 1000);
