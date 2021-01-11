@@ -221,7 +221,7 @@ app.listen(8545);
 
 setInterval(() => {
   reorganizeWithProbabilityAndTimeout(0.33,1000);
-  reorganizeWithProbabilityAndTimeout(0.33,1000);
+  reorganizeWithProbabilityAndTimeout(0.33,1500);
   State.next();
   State.printNewWork();
 }, 10000);
