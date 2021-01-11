@@ -20,6 +20,11 @@ function debug(msg) {
   }
 }
 
+function getTimestamp() {
+  return "0x" + web3.utils.toBN(Math.round((new Date()).getTime() / 1000)).toString("hex");
+}
+
+
 const seedhash0 = keccak256(
         Buffer.from("0000000000000000000000000000000000000000000000000000000000000000", "hex")
     );
@@ -76,6 +81,8 @@ State.next = function() {
   let nextBlockNumber = web3.utils.toBN(State.block.number).add(web3.utils.toBN(1));
   State.block.number = "0x" + nextBlockNumber.toString("hex");
 
+  State.block.timestamp = getTimestamp();
+
   let sealHash = web3.utils.soliditySha3(
     State.block.parentHash,
     State.block.sha3Uncles,
@@ -107,6 +114,29 @@ State.next = function() {
   State.work[0] = sealHash;
 }
 
+
+State.reorganize = function() {
+  debug("Reorganize block: " + JSON.stringify(State.block.number))
+  State.block.timestamp = getTimestamp();
+
+  State.work[0] = web3.utils.soliditySha3(
+      State.block.parentHash,
+      State.block.sha3Uncles,
+      State.block.author,
+      State.block.stateRoot,
+      State.block.transactionsRoot,
+      State.block.receiptsRoot,
+      State.block.logsBloom,
+      web3.utils.toBN(State.block.difficulty),
+      web3.utils.toBN(State.block.number),
+      web3.utils.toBN(State.block.gasLimit),
+      web3.utils.toBN(State.block.gasUsed),
+      web3.utils.toBN(State.block.timestamp),
+      web3.utils.toBN(State.block.nonce)
+  );
+}
+
+
 State.next();
 
 State.printNewWork = function() {
@@ -122,6 +152,14 @@ server.addMethod("eth_getWork", () => {
 
   return State.work;
 });
+
+function reorganizeWithProbabilityAndTimeout(probability, timeout) {
+  if (Math.random() <= probability) {
+    setTimeout(() => {
+      State.reorganize()
+    }, timeout);
+  }
+}
 
 server.addMethod("eth_submitWork", (w) => {
     let work = JSON.parse(JSON.stringify(w));
@@ -182,6 +220,8 @@ app.post("/", (req, res) => {
 app.listen(8545);
 
 setInterval(() => {
+  reorganizeWithProbabilityAndTimeout(0.33,1000);
+  reorganizeWithProbabilityAndTimeout(0.33,1500);
   State.next();
   State.printNewWork();
 }, 10000);
